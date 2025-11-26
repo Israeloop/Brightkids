@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Adventure Game - Modo Local</title>
+    <!-- Incluir Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos CSS del juego */
+        body { font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #fce1e8 0%, #fff3f7 100%); }
+        .game-card { background-color: #ffffff; box-shadow: 0 10px 25px rgba(249, 168, 212, 0.6); border: none; }
+        .option-button { transition: all 0.2s; @apply flex flex-col items-center justify-center p-4 sm:p-6 rounded-2xl shadow-lg border-4 border-transparent bg-pink-50 hover:bg-pink-100 hover:border-pink-400; cursor: pointer; min-height: 150px; }
+        .option-button:active { transform: scale(0.95); }
+        .emoji { font-size: 5rem; line-height: 1; }
+        .correct-answer { animation: pulse-green 0.5s 2; border-color: #10b981 !important; @apply bg-green-50; }
+        .wrong-answer { animation: shake 0.5s; border-color: #ef4444 !important; @apply bg-red-50; }
+        @keyframes pulse-green { 0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 50% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); } }
+        @keyframes shake { 0% { transform: translateX(0); } 20% { transform: translateX(-10px); } 40% { transform: translateX(10px); } 60% { transform: translateX(-10px); } 80% { transform: translateX(10px); } 100% { transform: translateX(0); } }
+    </style>
+    
+    <!-- NOTA: Se han eliminado todas las importaciones de Firebase. El juego es completamente local. -->
+</head>
+<body class="p-4 md:p-8 min-h-screen flex flex-col items-center justify-center">
+
+    <h1 class="text-5xl font-black text-pink-700 mb-2 text-center drop-shadow-md">
+        ⭐️ English Adventure! ⭐️
+    </h1>
+    <p class="text-xl text-pink-500 mb-6 text-center">
+        ¡Escucha y Empareja! (Ronda <span id="round-count">0</span> de 10)
+    </p>
+
+    <div id="game-container" class="w-full max-w-xl game-card p-6 rounded-3xl shadow-2xl">
+        <!-- Área de Puntuación, Estado y Tarea -->
+        <div class="bg-purple-600 text-white p-4 rounded-t-2xl flex justify-between items-center shadow-lg">
+            <div class="text-lg font-bold">Puntuación: <span id="score-display">0</span></div>
+            <div id="category-display" class="text-lg font-bold">Categoría: -</div>
+        </div>
+
+        <div class="bg-purple-100 p-5 rounded-b-xl mb-6 shadow-inner flex flex-col items-center">
+            <div id="status-message" class="text-2xl font-bold text-purple-800 mb-4 text-center">
+                Juego listo. Presiona COMENZAR.
+            </div>
+            <button id="speak-button" onclick="handleSpeakButtonClick()" class="w-full sm:w-auto px-8 py-4 bg-pink-500 text-white font-black text-xl rounded-full shadow-xl hover:bg-pink-600 transition duration-150 transform hover:scale-105 disabled:opacity-50 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 mr-3"><path d="M11 5L6 9H2V15H6L11 19V5Z"></path><path d="M15.54 8.46a6 6 0 0 1 0 7.08"></path></svg>
+                <span id="speak-text">COMENZAR</span>
+            </button>
+        </div>
+        
+        <!-- Opciones de Juego -->
+        <div id="options-grid" class="grid grid-cols-2 gap-4 sm:gap-6">
+            <div class="col-span-2 text-center p-4 text-purple-700">
+                <p class="text-xl font-semibold">¡Presiona COMENZAR para aprender!</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- GAME DATA ---
+        const vocabulary = [
+            { word: "Red", spanish: "Rojo", category: "Color", emoji: "🔴" },
+            { word: "Blue", spanish: "Azul", category: "Color", emoji: "🔵" },
+            { word: "Green", spanish: "Verde", category: "Color", emoji: "🟢" },
+            { word: "Yellow", spanish: "Amarillo", category: "Color", emoji: "🟡" },
+            { word: "Cat", spanish: "Gato", category: "Animal", emoji: "🐈" },
+            { word: "Dog", spanish: "Perro", category: "Animal", emoji: "🐕" },
+            { word: "Apple", spanish: "Manzana", category: "Fruta", emoji: "🍎" },
+            { word: "Banana", spanish: "Banana", category: "Fruta", emoji: "🍌" },
+            { word: "One", spanish: "Uno", category: "Número", emoji: "1️⃣" },
+            { word: "Two", spanish: "Dos", category: "Número", emoji: "2️⃣" },
+            { word: "Hand", spanish: "Mano", category: "Cuerpo", emoji: "✋" },
+            { word: "Foot", spanish: "Pie", category: "Cuerpo", emoji: "🦶" },
+        ];
+
+        // --- Estado del Juego ---
+        const MAX_ROUNDS = 10;
+        let currentWord = null;
+        let isSpeaking = false;
+        let isWaitingForAnswer = false;
+        let score = 0;
+        let round = 0;
+
+        const statusMessage = document.getElementById('status-message');
+        const speakButton = document.getElementById('speak-button');
+        const optionsGrid = document.getElementById('options-grid');
+        const scoreDisplay = document.getElementById('score-display');
+        const roundCount = document.getElementById('round-count');
+        const categoryDisplay = document.getElementById('category-display');
+        
+        // Web Speech API Setup
+        const synth = window.speechSynthesis;
+        let englishVoice = null;
+        
+        function setEnglishVoice() {
+            const voices = synth.getVoices();
+            // Busca una voz en inglés de EEUU o la primera en inglés
+            englishVoice = voices.find(voice => voice.lang === 'en-US' && (voice.name.includes('Google') || voice.lang.startsWith('en')));
+        }
+
+        // Se asegura de que la voz esté disponible antes de usarla
+        if (synth.onvoiceschanged !== undefined) { synth.onvoiceschanged = setEnglishVoice; }
+        setEnglishVoice(); 
+
+        // --- TTS and Speaking Logic ---
+        function speakWord(text, isInitialWord = false) {
+            if (isSpeaking && isInitialWord) return Promise.resolve();
+
+            isSpeaking = true;
+            synth.cancel();
+
+            return new Promise((resolve) => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                if (englishVoice) { utterance.voice = englishVoice; }
+                utterance.rate = 0.9; 
+
+                utterance.onend = () => {
+                    isSpeaking = false;
+                    if (isInitialWord && currentWord) {
+                        speakButton.disabled = false;
+                        isWaitingForAnswer = true;
+                        statusMessage.textContent = `Escuchaste: "${currentWord.word}". ¡Ahora elige!`;
+                    }
+                    resolve();
+                };
+                utterance.onerror = (event) => {
+                    console.error('SpeechSynthesis Utterance Error:', event);
+                    isSpeaking = false;
+                    if (isInitialWord) {
+                        speakButton.disabled = false;
+                        statusMessage.textContent = "Error de voz. Intenta de nuevo.";
+                    }
+                    resolve();
+                };
+                synth.speak(utterance);
+                
+                if (isInitialWord) {
+                    speakButton.disabled = true;
+                    statusMessage.textContent = `🗣️ Pronunciando: ${text}...`;
+                }
+            });
+        }
+        
+        function handleSpeakButtonClick() {
+            if (round === 0) {
+                startNewGame();
+                return;
+            }
+            if (currentWord) {
+                speakWord(currentWord.word, true); 
+            }
+        }
+
+        // --- Game Logic ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function showFinalScore() {
+            statusMessage.innerHTML = `¡JUEGO TERMINADO! 🎉 <br>Tu puntuación final es: <span class="text-pink-600 font-extrabold">${score}</span> de ${MAX_ROUNDS}.`;
+            speakButton.classList.add('hidden');
+            optionsGrid.innerHTML = `<div class="col-span-2 text-center p-8 bg-purple-50 rounded-xl"><p class="text-2xl text-purple-700 font-bold mb-4">¡Gran trabajo!</p><button onclick="resetGame()" class="px-8 py-4 bg-green-500 text-white font-black text-xl rounded-full shadow-xl hover:bg-green-600 transition transform hover:scale-105">Empezar de Nuevo</button></div>`;
+        }
+
+        function showWelcomeScreen() {
+            score = 0;
+            round = 0;
+            scoreDisplay.textContent = score;
+            roundCount.textContent = 0;
+            categoryDisplay.textContent = 'Estado: Bienvenida';
+
+            speakButton.classList.remove('hidden');
+            optionsGrid.innerHTML = `<div class="col-span-2 text-center p-4 text-purple-700"><p class="text-xl font-semibold">¡Aprende y diviértete!</p></div>`;
+
+            statusMessage.innerHTML = `<span class="text-3xl font-extrabold text-pink-700">¡Bienvenidos!</span><br><span class="text-base font-normal text-purple-800">Presiona COMENZAR para aprender.</span><br><br><span class="text-xl font-bold">¡Presiona COMENZAR para aprender!</span>`;
+            document.getElementById('speak-text').textContent = 'COMENZAR';
+            speakButton.disabled = false;
+            isWaitingForAnswer = false;
+        }
+
+        function startNewGame() {
+            document.getElementById('speak-text').textContent = 'ESCUCHAR';
+            getNewRound();
+        }
+        
+        function resetGame() {
+            showWelcomeScreen();
+        }
+
+        function getNewRound() {
+            if (round >= MAX_ROUNDS) { showFinalScore(); return; }
+
+            round++;
+            roundCount.textContent = round;
+            const targetIndex = Math.floor(Math.random() * vocabulary.length);
+            currentWord = vocabulary[targetIndex];
+            categoryDisplay.textContent = `Categoría: ${currentWord.category}`;
+
+            const optionsPool = vocabulary.filter(item => item.word !== currentWord.word);
+            const sliceSize = Math.min(3, optionsPool.length); 
+            let shuffledIncorrect = shuffleArray(optionsPool).slice(0, sliceSize);
+
+            let options = [...shuffledIncorrect, currentWord];
+            options = shuffleArray(options);
+
+            renderOptions(options);
+
+            isWaitingForAnswer = false;
+            speakButton.disabled = false;
+            statusMessage.textContent = `Ronda ${round}. Presiona ESCUCHAR y elige la palabra.`;
+        }
+
+        function renderOptions(options) {
+            optionsGrid.innerHTML = '';
+            options.forEach((item, index) => {
+                const button = document.createElement('div');
+                button.id = `option-${index}`;
+                button.classList.add('option-button');
+                button.setAttribute('data-english-word', item.word); 
+                button.innerHTML = `<span class="emoji">${item.emoji}</span><span class="mt-2 text-xl font-extrabold text-gray-800 text-center">${item.spanish}</span><span class="text-sm text-gray-400 mt-1">(${item.category})</span>`;
+                button.onclick = () => checkAnswer(item, button);
+                optionsGrid.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedItem, selectedButton) {
+            if (!isWaitingForAnswer) return; 
+            
+            isWaitingForAnswer = false;
+            speakButton.disabled = true;
+            optionsGrid.querySelectorAll('.option-button').forEach(btn => btn.onclick = null);
+
+            const correctButton = Array.from(optionsGrid.children).find(btn => btn.getAttribute('data-english-word') === currentWord.word);
+
+            if (selectedItem.word === currentWord.word) {
+                score++;
+                scoreDisplay.textContent = score;
+                selectedButton.classList.add('correct-answer');
+                statusMessage.innerHTML = `¡EXCELENTE! 🎉 La palabra es <span class="text-green-600 font-extrabold">"${currentWord.word}"</span>.`;
+                
+                speakWord("Excellent!").then(() => {
+                    setTimeout(() => { selectedButton.classList.remove('correct-answer'); getNewRound(); }, 1000); 
+                });
+                
+            } else {
+                selectedButton.classList.add('wrong-answer');
+                correctButton.classList.add('correct-answer'); 
+                statusMessage.innerHTML = `¡INCORRECTO! 😔 La respuesta correcta era <span class="text-green-600 font-extrabold">"${currentWord.word}"</span>.`;
+
+                speakWord(`The correct word is: ${currentWord.word}`).then(() => {
+                    setTimeout(() => { selectedButton.classList.remove('wrong-answer'); correctButton.classList.remove('correct-answer'); getNewRound(); }, 2500); 
+                });
+            }
+        }
+        
+        // Iniciar el juego en la pantalla de bienvenida al cargar la página.
+        document.addEventListener('DOMContentLoaded', showWelcomeScreen);
+    </script>
+</body>
+</html>
