@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🗺️ Lexicon Explorer Adventure</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-primary: #17A589; /* Teal Green */
+            --color-secondary: #F4D03F; /* Gold Yellow */
+            --color-bg: #EAF2F8; /* Light Sky */
+            --color-wall: #34495E; /* Dark Grey (Stone) */
+            --color-path: #FDFEFE; /* White (Path) */
+            --color-start: #2ECC71; /* Start Green */
+            --color-goal: #E67E22; /* Goal Orange (Treasure) */
+            --color-error: #E74C3C; /* Red */
+            --shadow-light: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            text-align: center;
+            background-color: var(--color-bg);
+            color: #333;
+            margin: 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--color-primary);
+            font-size: 2.8em;
+            text-shadow: 2px 2px 0 var(--color-secondary);
+            margin-bottom: 5px;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            background: #FFFFFF;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-light);
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+
+        #game-container {
+            max-width: 600px;
+            width: 100%;
+            background: #FFFFFF;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            margin-top: 15px;
+        }
+
+        /* --- Map Grid --- */
+        #map-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); /* Map is 7x7 */
+            gap: 2px;
+            width: 100%;
+            max-width: 350px; /* Limit map size for clean display */
+            margin: 0 auto 30px auto;
+            border: 5px solid var(--color-wall);
+        }
+        
+        .tile {
+            width: 100%;
+            padding-bottom: 100%; /* Makes tiles perfectly square */
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            box-sizing: border-box;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .tile-content {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--color-path);
+        }
+
+        .tile.wall .tile-content { background-color: var(--color-wall); }
+        .tile.path .tile-content { background-color: var(--color-path); }
+        .tile.start .tile-content { background-color: var(--color-start); }
+        .tile.goal .tile-content { background-color: var(--color-goal); }
+        
+        .player-icon {
+            animation: pulse 1s infinite alternate;
+        }
+
+        /* --- Movement Controls --- */
+        #controls {
+            display: grid;
+            grid-template-areas: ". up ." "left . right" ". down .";
+            gap: 10px;
+            width: 100%;
+            max-width: 200px;
+            margin: 0 auto 20px auto;
+        }
+        
+        .move-button {
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-size: 1.2em;
+            font-family: 'Fredoka One', cursive;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 0 #138D75;
+        }
+        .move-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #138D75;
+        }
+        #move-up { grid-area: up; }
+        #move-down { grid-area: down; }
+        #move-left { grid-area: left; }
+        #move-right { grid-area: right; }
+
+        /* --- Question & Options --- */
+        #challenge-area {
+            border-top: 2px dashed #EEE;
+            padding-top: 20px;
+        }
+
+        #question-text {
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 20px;
+            min-height: 50px;
+        }
+
+        #options-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .option-button {
+            background-color: var(--color-secondary);
+            color: #333;
+            border: none;
+            padding: 12px 15px;
+            font-size: 1em;
+            font-weight: 700;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 3px 0 #C4A432;
+        }
+        .option-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px 0 #C4A432;
+        }
+        
+        .option-button.correct { background-color: var(--color-start); color: white; }
+        .option-button.incorrect { background-color: var(--color-error); color: white; }
+        
+        .disabled { pointer-events: none; opacity: 0.7; }
+        .hidden { display: none; }
+        
+        /* --- Final Message --- */
+        #final-message {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2em;
+            color: var(--color-primary);
+            margin-top: 20px;
+        }
+        
+        /* --- Animations --- */
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); }
+        }
+        
+    </style>
+    </head>
+<body>
+
+    <header>
+        <h1>🗺️ Lexicon Explorer</h1>
+        <div id="stats">
+            <div>Questions Solved: <span id="solved-count">0</span></div>
+            <div>Lives: <span id="lives-count">3</span> ❤️</div>
+        </div>
+    </header>
+
+    <main id="game-container">
+        
+        <div id="map-grid">
+            </div>
+
+        <div id="controls">
+            <button id="move-up" class="move-button" onclick="handleMovement('up')">⬆️</button>
+            <button id="move-left" class="move-button" onclick="handleMovement('left')">⬅️</button>
+            <button id="move-right" class="move-button" onclick="handleMovement('right')">➡️</button>
+            <button id="move-down" class="move-button" onclick="handleMovement('down')">⬇️</button>
+        </div>
+
+        <div id="challenge-area">
+            <p id="question-text">Use the arrows to move! Reach the 🏆 to win!</p>
+            
+            <div id="options-container" class="hidden">
+                </div>
+            
+            <p id="feedback" style="font-weight: 700;"></p>
+            
+            <button id="restart-button" class="move-button hidden" onclick="initGame()">Restart Game</button>
+        </div>
+        
+        <p id="final-message" class="hidden"></p>
+
+    </main>
+
+    <script>
+        // --- 1. GAME DATA ---
+        
+        // S = Start, G = Goal, P = Path, W = Wall (7x7 Map)
+        const MAP_DATA = [
+            ['W', 'W', 'W', 'W', 'W', 'W', 'W'],
+            ['S', 'P', 'P', 'W', 'P', 'P', 'W'],
+            ['W', 'W', 'P', 'W', 'P', 'W', 'W'],
+            ['W', 'P', 'P', 'P', 'P', 'W', 'W'],
+            ['W', 'P', 'W', 'W', 'W', 'W', 'W'],
+            ['W', 'P', 'P', 'P', 'P', 'P', 'G'],
+            ['W', 'W', 'W', 'W', 'W', 'W', 'W']
+        ];
+        const MAP_ROWS = MAP_DATA.length;
+        const MAP_COLS = MAP_DATA[0].length;
+        
+        // Vocabulary Question Bank (English)
+        const QUESTION_BANK = [
+            { question: "What is a synonym for 'Vast'?", options: ["Tiny", "Huge", "Quick", "Dull"], correctIndex: 1 },
+            { question: "The opposite of 'Ancient' is:", options: ["Old", "Modern", "Tall", "Heavy"], correctIndex: 1 },
+            { question: "What does 'Cautious' mean?", options: ["Careful", "Fast", "Angry", "Loud"], correctIndex: 0 },
+            { question: "Which word means 'to start'?", options: ["Complete", "Continue", "Commence", "Conclude"], correctIndex: 2 },
+            { question: "If something is 'Fragile', it is:", options: ["Strong", "Flexible", "Easily broken", "Expensive"], correctIndex: 2 },
+            { question: "What is the noun form of 'Decide'?", options: ["Decision", "Decisive", "Decider", "Decidely"], correctIndex: 0 },
+        ];
+
+        // --- 2. SELECTORS AND STATE ---
+        const mapGrid = document.getElementById('map-grid');
+        const optionsContainer = document.getElementById('options-container');
+        const questionText = document.getElementById('question-text');
+        const controls = document.getElementById('controls');
+        const feedbackDisplay = document.getElementById('feedback');
+        const solvedCountDisplay = document.getElementById('solved-count');
+        const livesCountDisplay = document.getElementById('lives-count');
+        const finalMessage = document.getElementById('final-message');
+        const restartButton = document.getElementById('restart-button');
+
+        let playerPos = { row: 0, col: 0 };
+        let targetPos = { row: 0, col: 0 };
+        let lives = 3;
+        let solvedQuestions = 0;
+        let isChallenging = false;
+        let currentQuestion = null;
+
+        // --- 3. CORE FUNCTIONS ---
+
+        // Finds the start position on the map
+        function findStart() {
+            for (let r = 0; r < MAP_ROWS; r++) {
+                for (let c = 0; c < MAP_COLS; c++) {
+                    if (MAP_DATA[r][c] === 'S') {
+                        return { row: r, col: c };
+                    }
+                }
+            }
+        }
+
+        // Renders the map and player position
+        function renderMap() {
+            mapGrid.innerHTML = '';
+            for (let r = 0; r < MAP_ROWS; r++) {
+                for (let c = 0; c < MAP_COLS; c++) {
+                    const tile = document.createElement('div');
+                    tile.classList.add('tile');
+                    tile.id = `tile-${r}-${c}`;
+                    
+                    const content = document.createElement('div');
+                    content.classList.add('tile-content');
+
+                    const type = MAP_DATA[r][c];
+                    
+                    if (type === 'W') tile.classList.add('wall');
+                    if (type === 'P') tile.classList.add('path');
+                    if (type === 'S') tile.classList.add('start');
+                    if (type === 'G') {
+                        tile.classList.add('goal');
+                        content.textContent = '🏆';
+                    }
+                    
+                    tile.appendChild(content);
+                    mapGrid.appendChild(tile);
+                }
+            }
+            updatePlayerIcon();
+        }
+        
+        // Updates the player's icon position
+        function updatePlayerIcon() {
+            // 1. Clear previous player icon
+            document.querySelectorAll('.player-icon').forEach(icon => icon.remove());
+            
+            // 2. Add new player icon
+            const currentTile = document.getElementById(`tile-${playerPos.row}-${playerPos.col}`);
+            if (currentTile) {
+                const icon = document.createElement('span');
+                icon.classList.add('player-icon');
+                icon.textContent = '🧑'; // Player avatar
+                currentTile.querySelector('.tile-content').appendChild(icon);
+            }
+        }
+
+        // Handles directional movement input
+        window.handleMovement = function(direction) {
+            if (isChallenging) return;
+            
+            let newRow = playerPos.row;
+            let newCol = playerPos.col;
+
+            if (direction === 'up') newRow--;
+            else if (direction === 'down') newRow++;
+            else if (direction === 'left') newCol--;
+            else if (direction === 'right') newCol++;
+
+            targetPos = { row: newRow, col: newCol };
+            
+            // Check boundaries
+            if (newRow < 0 || newRow >= MAP_ROWS || newCol < 0 || newCol >= MAP_COLS) {
+                feedbackDisplay.textContent = "Cannot move outside the map!";
+                return;
+            }
+
+            const targetTile = MAP_DATA[newRow][newCol];
+
+            if (targetTile === 'W') {
+                feedbackDisplay.textContent = "That's a wall! Find another path.";
+                return;
+            }
+
+            if (targetTile === 'G') {
+                playerPos = targetPos;
+                updatePlayerIcon();
+                checkWinCondition();
+                return;
+            }
+
+            // Path or Start tile: Initiate a challenge
+            startChallenge();
+        }
+
+        // Sets up a question challenge
+        function startChallenge() {
+            isChallenging = true;
+            controls.classList.add('disabled');
+            feedbackDisplay.textContent = "";
+            restartButton.classList.add('hidden');
+            
+            // Select a random question that hasn't been used (simple random selection for now)
+            const randomIndex = Math.floor(Math.random() * QUESTION_BANK.length);
+            currentQuestion = QUESTION_BANK[randomIndex];
+            
+            questionText.textContent = currentQuestion.question;
+            optionsContainer.innerHTML = '';
+            optionsContainer.classList.remove('hidden');
+
+            currentQuestion.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.classList.add('option-button');
+                button.textContent = option;
+                button.setAttribute('data-index', index);
+                button.onclick = () => checkAnswer(index);
+                optionsContainer.appendChild(button);
+            });
+        }
+        
+        // Checks the answer selected by the user
+        function checkAnswer(selectedIndex) {
+            isChallenging = false;
+            optionsContainer.classList.add('disabled');
+            
+            // Highlight the selected and correct answers
+            Array.from(optionsContainer.children).forEach((btn, index) => {
+                if (index === currentQuestion.correctIndex) {
+                    btn.classList.add('correct');
+                }
+                if (index === selectedIndex && index !== currentQuestion.correctIndex) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            if (selectedIndex === currentQuestion.correctIndex) {
+                // Correct Answer: Move player
+                feedbackDisplay.textContent = "Correct! Moving forward!";
+                playerPos = targetPos;
+                updatePlayerIcon();
+                solvedQuestions++;
+                solvedCountDisplay.textContent = solvedQuestions;
+            } else {
+                // Incorrect Answer: Deduct life
+                feedbackDisplay.textContent = "Incorrect! Answer was: " + currentQuestion.options[currentQuestion.correctIndex];
+                lives--;
+                livesCountDisplay.textContent = lives;
+            }
+            
+            // Delay for feedback display, then reset
+            setTimeout(() => {
+                resetChallenge();
+            }, 1500);
+        }
+        
+        // Resets the challenge UI and enables movement
+        function resetChallenge() {
+            optionsContainer.classList.add('hidden');
+            optionsContainer.classList.remove('disabled');
+            controls.classList.remove('disabled');
+            questionText.textContent = "Where do you want to move next?";
+            
+            checkWinCondition();
+            checkGameOver();
+        }
+
+        // Checks if the player won
+        function checkWinCondition() {
+            if (MAP_DATA[playerPos.row][playerPos.col] === 'G') {
+                controls.classList.add('disabled');
+                finalMessage.textContent = `🎉 CONGRATULATIONS! You reached the treasure solving ${solvedQuestions} questions!`;
+                finalMessage.classList.remove('hidden');
+                restartButton.classList.remove('hidden');
+            }
+        }
+        
+        // Checks if the player lost
+        function checkGameOver() {
+            if (lives <= 0) {
+                controls.classList.add('disabled');
+                finalMessage.textContent = `💔 GAME OVER! You ran out of lives. You solved ${solvedQuestions} questions.`;
+                finalMessage.classList.remove('hidden');
+                restartButton.classList.remove('hidden');
+            }
+        }
+
+        // Initializes the game state
+        window.initGame = function() {
+            playerPos = findStart();
+            lives = 3;
+            solvedQuestions = 0;
+            isChallenging = false;
+            
+            livesCountDisplay.textContent = lives;
+            solvedCountDisplay.textContent = solvedQuestions;
+            finalMessage.classList.add('hidden');
+            restartButton.classList.add('hidden');
+            controls.classList.remove('disabled');
+            optionsContainer.classList.add('hidden');
+            questionText.textContent = "Use the arrows to move! Reach the 🏆 to win!";
+            feedbackDisplay.textContent = "";
+
+            renderMap();
+        }
+
+        // --- 5. INITIALIZE ---
+        initGame();
+    </script>
+    </body>
+</html>

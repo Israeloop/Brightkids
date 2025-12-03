@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔡 Word Scramble Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-primary: #1E87B7; /* Blue */
+            --color-secondary: #F1C40F; /* Yellow */
+            --color-success: #4CAF50; /* Green */
+            --color-error: #E74C3C; /* Red */
+            --color-bg: #F0F8FF; /* Light sky blue */
+            --shadow-deep: 0 6px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            text-align: center;
+            background-color: var(--color-bg);
+            color: #333;
+            margin: 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            max-width: 650px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--color-primary);
+            font-size: 2.8em;
+            text-shadow: 2px 2px 0 var(--color-secondary);
+            margin-bottom: 5px;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            background: #FFFFFF;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-deep);
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+        
+        #game-area {
+            max-width: 650px;
+            width: 100%;
+            background: #FFFFFF;
+            padding: 30px 20px;
+            border-radius: 15px;
+            box-shadow: var(--shadow-deep);
+        }
+
+        /* --- Answer Slots Area (User Input) --- */
+        #answer-slots {
+            min-height: 80px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0 30px 0;
+            padding: 10px;
+            border: 2px solid var(--color-primary);
+            border-radius: 10px;
+            background-color: #f7f7f7;
+            align-items: center;
+            transition: all 0.3s;
+        }
+        
+        .answer-slot {
+            width: 40px;
+            height: 50px;
+            background-color: #E0E0E0;
+            border-radius: 5px;
+            border: 1px dashed #999;
+        }
+
+        /* --- Letter Options Area (Clickable Letters) --- */
+        #letter-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .letter-button {
+            background-color: var(--color-secondary);
+            color: #333;
+            border: none;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5em;
+            font-family: 'Fredoka One', cursive;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.1s;
+            box-shadow: 0 4px 0 #CC9900; 
+        }
+        
+        .letter-button:active {
+            box-shadow: 0 1px 0 #CC9900;
+            transform: translateY(3px);
+        }
+        
+        .letter-button.used {
+            opacity: 0.3;
+            pointer-events: none;
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* --- Control Buttons --- */
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .control-button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        #check-button {
+            background-color: var(--color-primary);
+            color: white;
+            box-shadow: 0 4px 0 #156284;
+        }
+        
+        #clear-button {
+            background-color: var(--color-error);
+            color: white;
+            box-shadow: 0 4px 0 #A8332D;
+        }
+
+        #next-button {
+            background-color: var(--color-success);
+            color: white;
+            box-shadow: 0 4px 0 #3b8e40;
+        }
+        
+        .control-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Feedback --- */
+        #feedback {
+            margin-top: 20px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8em;
+            min-height: 40px;
+        }
+
+        .correct { color: var(--color-success); }
+        .incorrect { color: var(--color-error); }
+        .hidden { display: none; }
+
+    </style>
+    </head>
+<body>
+
+    <header>
+        <h1>✏️ Unscramble the Word</h1>
+        <div id="stats">
+            <div>Level: <span id="level-count">1</span> / <span id="total-levels">6</span></div>
+            <div>Score: <span id="score-count">0</span></div>
+        </div>
+    </header>
+
+    <main id="game-area">
+        
+        <div id="answer-slots">
+            </div>
+
+        <div id="letter-options">
+            </div>
+        
+        <div id="feedback"></div>
+
+        <div id="controls">
+            <button id="check-button" class="control-button">Check</button>
+            <button id="clear-button" class="control-button">Clear</button>
+            <button id="next-button" class="control-button hidden">Next Word</button>
+        </div>
+
+    </main>
+    
+    <p id="final-message" class="hidden" style="font-size: 2em; margin-top: 30px;">
+        Game Over! You finished all words! 🎉
+    </p>
+
+    <script>
+        // --- 1. GAME DATA ---
+        const wordList = [
+            "APPLE", "TIGER", "HOUSE", "TRAIN", "WATER", "CHAIR"
+            // You can easily add more words here (e.g., "BANANA", "ELEPHANT", "SCHOOL")
+        ];
+
+        // --- 2. SELECTORS AND STATE ---
+        const answerSlots = document.getElementById('answer-slots');
+        const letterOptions = document.getElementById('letter-options');
+        const checkButton = document.getElementById('check-button');
+        const clearButton = document.getElementById('clear-button');
+        const nextButton = document.getElementById('next-button');
+        const feedbackDisplay = document.getElementById('feedback');
+        const levelCountDisplay = document.getElementById('level-count');
+        const scoreCountDisplay = document.getElementById('score-count');
+        const totalLevelsDisplay = document.getElementById('total-levels');
+        const finalMessage = document.getElementById('final-message');
+
+        let currentWordIndex = 0;
+        let score = 0;
+        let currentWord = ''; 
+        let currentScrambledLetters = [];
+        let usedLetterButtons = []; // Stores buttons moved to answer slots
+
+        totalLevelsDisplay.textContent = wordList.length;
+
+        // --- 3. CORE FUNCTIONS ---
+        
+        // TTS Function for English (en-US)
+        function speakWord(text) {
+            if ('speechSynthesis' in window) {
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; 
+                utterance.rate = 0.9; 
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Helper: Shuffles the letters of a word
+        function shuffleWord(word) {
+            let a = word.split(""),
+                n = a.length;
+            for(let i = n - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                let tmp = a[i];
+                a[i] = a[j];
+                a[j] = tmp;
+            }
+            return a.join("");
+        }
+
+        // Creates the UI for the current word
+        function loadWord() {
+            if (currentWordIndex >= wordList.length) {
+                showFinishScreen();
+                return;
+            }
+            
+            // Reset UI and State
+            currentWord = wordList[currentWordIndex];
+            answerSlots.innerHTML = '';
+            letterOptions.innerHTML = '';
+            feedbackDisplay.textContent = '';
+            feedbackDisplay.className = '';
+            nextButton.classList.add('hidden');
+            checkButton.disabled = false;
+            clearButton.disabled = false;
+            levelCountDisplay.textContent = currentWordIndex + 1;
+            usedLetterButtons = [];
+            
+            // 1. Prepare scrambled letters
+            const scrambled = shuffleWord(currentWord);
+            currentScrambledLetters = scrambled.split('');
+
+            // 2. Render Answer Slots
+            for (let i = 0; i < currentWord.length; i++) {
+                const slot = document.createElement('div');
+                slot.classList.add('answer-slot');
+                slot.setAttribute('data-index', i);
+                answerSlots.appendChild(slot);
+            }
+            
+            // 3. Render Letter Buttons
+            currentScrambledLetters.forEach((letter, index) => {
+                const button = document.createElement('button');
+                button.classList.add('letter-button');
+                button.textContent = letter;
+                button.setAttribute('data-letter', letter);
+                button.setAttribute('data-unique-id', index); // Unique ID to track usage
+                button.addEventListener('click', handleLetterClick);
+                letterOptions.appendChild(button);
+            });
+        }
+        
+        // Handles clicking a scrambled letter button
+        function handleLetterClick(event) {
+            const button = event.currentTarget;
+            let firstEmptySlot = Array.from(answerSlots.children).find(slot => slot.childNodes.length === 0);
+
+            if (firstEmptySlot) {
+                // Clone the button's appearance (but not the actual node) to put in the slot
+                const letterDisplay = document.createElement('button');
+                letterDisplay.classList.add('letter-button');
+                letterDisplay.textContent = button.textContent;
+                letterDisplay.setAttribute('data-source-id', button.getAttribute('data-unique-id'));
+                
+                // Add click listener to the letter in the answer slot to return it
+                letterDisplay.addEventListener('click', returnLetter);
+                
+                firstEmptySlot.appendChild(letterDisplay);
+                
+                button.classList.add('used');
+                usedLetterButtons.push(button);
+            }
+        }
+        
+        // Handles clicking a letter in the answer slot to return it
+        function returnLetter(event) {
+            const letterDisplay = event.currentTarget;
+            const sourceId = letterDisplay.getAttribute('data-source-id');
+            const sourceButton = letterOptions.querySelector(`[data-unique-id="${sourceId}"]`);
+
+            if (sourceButton) {
+                sourceButton.classList.remove('used');
+            }
+            letterDisplay.remove();
+        }
+
+        // Compares the constructed word with the target word
+        function checkAnswer() {
+            const constructedWord = Array.from(answerSlots.querySelectorAll('.letter-button'))
+                .map(btn => btn.textContent)
+                .join('');
+            
+            checkButton.disabled = true;
+
+            if (constructedWord === currentWord) {
+                feedbackDisplay.textContent = "Correct! Well done!";
+                feedbackDisplay.classList.add('correct');
+                feedbackDisplay.classList.remove('incorrect');
+                score++;
+                scoreCountDisplay.textContent = score;
+                nextButton.classList.remove('hidden');
+                clearButton.disabled = true;
+                
+                // Speak the correct word
+                speakWord(currentWord);
+
+            } else {
+                feedbackDisplay.textContent = "Incorrect. Try again!";
+                feedbackDisplay.classList.add('incorrect');
+                feedbackDisplay.classList.remove('correct');
+                checkButton.disabled = false; // Re-enable check
+            }
+        }
+
+        // Clears the answer area and returns letters
+        function clearAnswer() {
+            // Remove all letters from slots
+            Array.from(answerSlots.children).forEach(slot => {
+                slot.innerHTML = ''; // Removes the letter button
+            });
+            
+            // Unmark all original letter buttons as used
+            Array.from(letterOptions.children).forEach(button => {
+                button.classList.remove('used');
+            });
+            
+            feedbackDisplay.textContent = '';
+            feedbackDisplay.className = '';
+        }
+        
+        // Advances to the next word
+        function nextWord() {
+            currentWordIndex++;
+            loadWord();
+        }
+
+        // Shows the final screen
+        function showFinishScreen() {
+            document.getElementById('game-area').classList.add('hidden');
+            document.querySelector('header').classList.add('hidden');
+            finalMessage.classList.remove('hidden');
+        }
+
+        // --- 4. EVENT LISTENERS ---
+        checkButton.addEventListener('click', checkAnswer);
+        clearButton.addEventListener('click', clearAnswer);
+        nextButton.addEventListener('click', nextWord);
+
+        // --- 5. INITIALIZE ---
+        loadWord();
+    </script>
+    </body>
+</html>

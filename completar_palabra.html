@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📝 Fill-in-the-Blank Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-primary: #8E44AD; /* Purple */
+            --color-secondary: #F39C12; /* Orange */
+            --color-success: #2ECC71; /* Emerald Green */
+            --color-error: #E74C3C; /* Red */
+            --color-bg: #F8F9F9; /* Very Light Gray */
+            --shadow-deep: 0 6px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            text-align: center;
+            background-color: var(--color-bg);
+            color: #333;
+            margin: 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            max-width: 700px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--color-primary);
+            font-size: 2.8em;
+            text-shadow: 2px 2px 0 var(--color-secondary);
+            margin-bottom: 5px;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            background: #FFFFFF;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-deep);
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+        
+        #game-area {
+            max-width: 700px;
+            width: 100%;
+            background: #FFFFFF;
+            padding: 30px 20px;
+            border-radius: 15px;
+            box-shadow: var(--shadow-deep);
+        }
+
+        /* --- Clue Area --- */
+        #clue-area {
+            font-size: 1.3em;
+            font-style: italic;
+            margin-bottom: 30px;
+            padding: 15px;
+            border-bottom: 2px dashed #DDD;
+            cursor: pointer; /* Suggests clicking for voice */
+            color: var(--color-primary);
+        }
+
+        /* --- Word Display/Inputs --- */
+        #word-display {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 30px 0;
+            align-items: center;
+        }
+
+        .letter-slot {
+            width: 45px;
+            height: 55px;
+            font-size: 1.8em;
+            font-family: 'Fredoka One', cursive;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background-color: #EEE;
+            color: #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .letter-input {
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            border: 2px solid var(--color-secondary);
+            background-color: #FFFDEE;
+            padding: 0;
+            margin: 0;
+            box-sizing: border-box;
+            text-transform: uppercase;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8em;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .letter-input:focus {
+            border-color: var(--color-primary);
+            box-shadow: 0 0 5px rgba(142, 68, 173, 0.5);
+        }
+
+        /* --- Control Buttons --- */
+        #controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .control-button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            font-weight: 700;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        #check-button {
+            background-color: var(--color-primary);
+            color: white;
+            box-shadow: 0 4px 0 #6C3483;
+        }
+        
+        #next-button {
+            background-color: var(--color-success);
+            color: white;
+            box-shadow: 0 4px 0 #27AE60;
+        }
+        
+        .control-button:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- Feedback --- */
+        #feedback {
+            margin-top: 20px;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.5em;
+            min-height: 30px;
+        }
+
+        .correct { color: var(--color-success); }
+        .incorrect { color: var(--color-error); }
+        .hidden { display: none; }
+        
+        /* Final Message */
+        #final-message {
+            font-size: 2em; 
+            margin-top: 30px;
+            color: var(--color-primary);
+            font-family: 'Fredoka One', cursive;
+        }
+
+    </style>
+    </head>
+<body>
+
+    <header>
+        <h1>❓ Fill-in-the-Blank</h1>
+        <div id="stats">
+            <div>Level: <span id="level-count">1</span> / <span id="total-levels">5</span></div>
+            <div>Score: <span id="score-count">0</span></div>
+        </div>
+    </header>
+
+    <main id="game-area">
+        
+        <div id="clue-area" onclick="speakClue()">
+            Click here for the clue (and voice): <span id="current-clue"></span>
+        </div>
+
+        <div id="word-display">
+            </div>
+        
+        <div id="feedback"></div>
+
+        <div id="controls">
+            <button id="check-button" class="control-button">Check Answer</button>
+            <button id="next-button" class="control-button hidden">Next Word</button>
+        </div>
+
+    </main>
+    
+    <p id="final-message" class="hidden">
+        Game Over! You mastered all the words! 🎉
+    </p>
+
+    <script>
+        // --- 1. GAME DATA ---
+        // 'blanks' are the 0-based indices of the letters to hide (inputs).
+        const wordData = [
+            { word: "ELEPHANT", clue: "The largest land animal.", blanks: [0, 2, 5] },
+            { word: "TEACHER", clue: "A person who educates students.", blanks: [1, 3, 6] },
+            { word: "YELLOW", clue: "The color of a school bus.", blanks: [1, 4] },
+            { word: "COMPUTER", clue: "An electronic device for storing and processing data.", blanks: [2, 4, 7] },
+            { word: "FAMILY", clue: "A group of people related by blood or marriage.", blanks: [0, 2, 5] }
+        ];
+
+        // --- 2. SELECTORS AND STATE ---
+        const wordDisplay = document.getElementById('word-display');
+        const currentClue = document.getElementById('current-clue');
+        const checkButton = document.getElementById('check-button');
+        const nextButton = document.getElementById('next-button');
+        const feedbackDisplay = document.getElementById('feedback');
+        const levelCountDisplay = document.getElementById('level-count');
+        const scoreCountDisplay = document.getElementById('score-count');
+        const totalLevelsDisplay = document.getElementById('total-levels');
+        const finalMessage = document.getElementById('final-message');
+
+        let currentWordIndex = 0;
+        let score = 0;
+        let currentLevel = {};
+        let blankInputs = []; // Stores references to the input elements
+
+        totalLevelsDisplay.textContent = wordData.length;
+
+        // --- 3. CORE FUNCTIONS ---
+        
+        // TTS Function for English (en-US)
+        function speakWord(text) {
+            if ('speechSynthesis' in window) {
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; 
+
+                utterance.rate = 0.9; 
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        // Function to speak the current clue
+        window.speakClue = function() {
+            if (currentLevel.clue) {
+                speakWord("Clue: " + currentLevel.clue);
+            }
+        }
+
+        // Moves the focus to the next blank input
+        function autoAdvance(event) {
+            const input = event.target;
+            // Only proceed if a character was actually typed
+            if (input.value.length === 1 && /^[a-zA-Z]$/.test(input.value)) {
+                
+                // Find the index of the current input in the blankInputs array
+                const currentIndex = blankInputs.indexOf(input);
+                
+                if (currentIndex !== -1 && currentIndex < blankInputs.length - 1) {
+                    // Move focus to the next input field
+                    blankInputs[currentIndex + 1].focus();
+                } else if (currentIndex === blankInputs.length - 1) {
+                    // If it's the last one, check the answer immediately
+                    checkButton.focus();
+                }
+            }
+        }
+        
+        // Clears any non-letter input and limits to 1 character
+        function sanitizeInput(event) {
+            const input = event.target;
+            const originalValue = input.value;
+            // Remove non-letters and limit to 1 char
+            let sanitized = originalValue.replace(/[^a-zA-Z]/g, '').toUpperCase().substring(0, 1);
+            input.value = sanitized;
+        }
+
+        // Creates the UI for the current word
+        function loadWord() {
+            if (currentWordIndex >= wordData.length) {
+                showFinishScreen();
+                return;
+            }
+            
+            // Reset UI and State
+            currentLevel = wordData[currentWordIndex];
+            wordDisplay.innerHTML = '';
+            feedbackDisplay.textContent = '';
+            feedbackDisplay.className = '';
+            nextButton.classList.add('hidden');
+            checkButton.disabled = false;
+            blankInputs = [];
+            
+            levelCountDisplay.textContent = currentWordIndex + 1;
+            currentClue.textContent = currentLevel.clue;
+            
+            // Speak the clue upon loading
+            speakClue();
+
+            // 1. Render the word structure
+            const wordLetters = currentLevel.word.split('');
+            wordLetters.forEach((letter, index) => {
+                const slot = document.createElement('div');
+                slot.classList.add('letter-slot');
+
+                if (currentLevel.blanks.includes(index)) {
+                    // Create an input field for the blank
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.maxLength = 1;
+                    input.classList.add('letter-input');
+                    
+                    // Attach event listeners for auto-advance and sanitization
+                    input.addEventListener('input', sanitizeInput);
+                    input.addEventListener('keyup', autoAdvance);
+                    
+                    slot.appendChild(input);
+                    blankInputs.push(input);
+                } else {
+                    // Display the known letter
+                    slot.textContent = letter;
+                }
+                wordDisplay.appendChild(slot);
+            });
+            
+            // Focus on the first blank input
+            if (blankInputs.length > 0) {
+                blankInputs[0].focus();
+            }
+        }
+
+        // Compares the user's answers with the target word
+        function checkAnswer() {
+            let isCorrect = true;
+            let currentBlankIndex = 0;
+            const word = currentLevel.word;
+            
+            // Check each input field against the expected letter
+            currentLevel.blanks.forEach(wordIndex => {
+                const input = blankInputs[currentBlankIndex];
+                const expectedLetter = word[wordIndex];
+                
+                if (input.value.toUpperCase() !== expectedLetter) {
+                    isCorrect = false;
+                    // Highlight incorrect input
+                    input.style.borderColor = varCss('color-error');
+                } else {
+                    // Highlight correct input
+                    input.style.borderColor = varCss('color-success');
+                }
+                currentBlankIndex++;
+            });
+            
+            checkButton.disabled = true;
+
+            if (isCorrect) {
+                feedbackDisplay.textContent = "CORRECT! The word is: " + word + "!";
+                feedbackDisplay.classList.add('correct');
+                feedbackDisplay.classList.remove('incorrect');
+                score++;
+                scoreCountDisplay.textContent = score;
+                nextButton.classList.remove('hidden');
+                speakWord(word); // Speak the correct word
+                
+                // Permanently display the answers
+                blankInputs.forEach(input => {
+                    input.style.border = 'none';
+                    input.style.backgroundColor = 'transparent';
+                    input.parentNode.textContent = input.value.toUpperCase();
+                });
+
+            } else {
+                feedbackDisplay.textContent = "INCORRECT. Please review your letters.";
+                feedbackDisplay.classList.add('incorrect');
+                feedbackDisplay.classList.remove('correct');
+                checkButton.disabled = false; // Re-enable check
+            }
+        }
+
+        // Advances to the next word
+        function nextWord() {
+            currentWordIndex++;
+            loadWord();
+        }
+
+        // Shows the final screen
+        function showFinishScreen() {
+            document.getElementById('game-area').classList.add('hidden');
+            document.querySelector('header').classList.add('hidden');
+            finalMessage.classList.remove('hidden');
+        }
+        
+        // Helper to retrieve CSS variables for JS use (for border color setting)
+        function varCss(varName) {
+            return getComputedStyle(document.documentElement).getPropertyValue(`--${varName}`);
+        }
+
+        // --- 4. EVENT LISTENERS ---
+        checkButton.addEventListener('click', checkAnswer);
+        nextButton.addEventListener('click', nextWord);
+
+        // --- 5. INITIALIZE ---
+        loadWord();
+    </script>
+    </body>
+</html>

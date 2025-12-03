@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧠 Professional Memory Game with Voice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-primary: #FF5733; /* Orange/Red Vivo */
+            --color-secondary: #33C4FF; /* Bright Blue */
+            --color-success: #4CAF50; /* Green */
+            --color-bg: #F0F8FF; /* Light sky blue */
+            --card-back-color: #33C4FF;
+            --shadow-deep: 0 8px 15px rgba(0, 0, 0, 0.3);
+            --board-gap: 18px; /* Slightly larger gap */
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            text-align: center;
+            background-color: var(--color-bg);
+            color: #333;
+            margin: 0;
+            padding: 20px 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            /* Aumentamos el máximo para que la cabecera acompañe al tablero */
+            max-width: 700px; 
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--color-primary);
+            font-size: 2.5em;
+            text-shadow: 2px 2px 0 var(--color-secondary);
+            margin-bottom: 5px;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-around;
+            background: #FFFFFF;
+            padding: 15px 20px; /* Padding más grande */
+            border-radius: 10px;
+            box-shadow: var(--shadow-deep);
+            font-weight: 700;
+            font-size: 1.2em; /* Texto de estadísticas más grande */
+        }
+
+        /* --- Game Board (4x4 Grid) --- */
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: var(--board-gap);
+            width: 100%;
+            max-width: 700px; /* AUMENTADO: Máximo del tablero */
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: var(--shadow-deep);
+            perspective: 1000px; 
+        }
+
+        /* --- Card Styles --- */
+        .card-container {
+            height: 150px; /* AUMENTADO: Altura de la carta (antes 120px) */
+            cursor: pointer;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+        }
+
+        .card-container.flipped {
+            transform: rotateY(180deg);
+            pointer-events: none; 
+        }
+
+        .card-container.matched {
+            pointer-events: none;
+            opacity: 0.9;
+            animation: pulse-match 0.5s ease-out; 
+        }
+
+        .card-front, .card-back {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            backface-visibility: hidden; 
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            font-size: 4em; /* Icono más grande (antes 3em) */
+        }
+
+        .card-back {
+            background-color: var(--card-back-color);
+            color: white;
+            font-family: 'Fredoka One', cursive;
+            font-size: 1.8em; /* Texto de Match más grande */
+            text-shadow: 1px 1px 0 #1e87b7;
+            user-select: none;
+        }
+
+        .card-front {
+            background-color: #f9f9f9;
+            transform: rotateY(180deg);
+        }
+
+        /* --- Final Message --- */
+        #final-message {
+            font-family: 'Fredoka One', cursive;
+            font-size: 3.5em; /* Mensaje final más grande */
+            color: var(--color-success);
+            text-shadow: 2px 2px 0 var(--color-primary);
+            margin-top: 50px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* --- Animations --- */
+        @keyframes pulse-match {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); background-color: var(--color-success); }
+            100% { transform: scale(1); }
+        }
+        
+        /* --- Button Style (Restart) --- */
+        .action-button {
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            font-family: 'Fredoka One', cursive;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s ease;
+            box-shadow: 0 5px 0 #BF4224; /* 3D Shadow */
+        }
+        .action-button:active {
+            box-shadow: 0 2px 0 #BF4224;
+            transform: translateY(3px);
+        }
+    </style>
+    </head>
+<body>
+
+    <header>
+        <h1>🌟 Memory Match!</h1>
+        <div id="stats">
+            <div>Matches Found: <span id="matches-count">0</span> / 8</div>
+            <div>Moves: <span id="moves-count">0</span></div>
+        </div>
+    </header>
+
+    <main>
+        
+        <div id="game-board">
+            </div>
+        
+        <p id="final-message" class="hidden">Congratulations! You Won! 🎉</p>
+        
+        <button id="restart-button" class="action-button hidden">Play Again</button>
+
+    </main>
+
+    <script>
+        // --- 1. GAME DATA ---
+        const initialCards = [
+            { name: "Lion", icon: "🦁" }, { name: "Dog", icon: "🐶" }, { name: "Cat", icon: "🐱" }, 
+            { name: "Fish", icon: "🐠" }, { name: "Monkey", icon: "🐒" }, { name: "Bird", icon: "🐦" }, 
+            { name: "Bear", icon: "🐻" }, { name: "Frog", icon: "🐸" }
+        ];
+
+        // --- 2. SELECTORS AND STATE ---
+        const gameBoard = document.getElementById('game-board');
+        const matchesCountDisplay = document.getElementById('matches-count');
+        const movesCountDisplay = document.getElementById('moves-count');
+        const finalMessage = document.getElementById('final-message');
+        const restartButton = document.getElementById('restart-button');
+        
+        let boardData = [];
+        let flippedCards = [];
+        let matchesFound = 0;
+        let totalMoves = 0;
+        let lockBoard = false; // Flag to prevent rapid clicking
+
+        const TOTAL_PAIRS = initialCards.length;
+
+        // --- 3. CORE FUNCTIONS ---
+
+        // TTS Function for English (en-US)
+        function speakWord(text) {
+            if ('speechSynthesis' in window) {
+                // Cancel any ongoing speech
+                if (speechSynthesis.speaking) {
+                    speechSynthesis.cancel();
+                }
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US'; 
+                utterance.rate = 0.9; 
+                
+                speechSynthesis.speak(utterance);
+            } else {
+                console.warn('Speech Synthesis not supported. Voice feature disabled.');
+            }
+        }
+
+        // Helper: Shuffles an array (Fisher-Yates algorithm)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Sets up the data for the board (creates pairs and shuffles)
+        function setupBoard() {
+            // 1. Double the cards to create pairs
+            boardData = initialCards.concat(initialCards);
+            
+            // 2. Add unique ID and pair ID
+            boardData = boardData.map((card, index) => ({
+                ...card,
+                uniqueId: index, 
+                pairId: card.name // The name is the match ID
+            }));
+
+            // 3. Shuffle the final deck
+            boardData = shuffle(boardData);
+        }
+
+        // Renders the cards to the DOM
+        function renderBoard() {
+            gameBoard.innerHTML = ''; // Clear previous board
+            boardData.forEach((card) => {
+                const cardContainer = document.createElement('div');
+                cardContainer.classList.add('card-container');
+                cardContainer.setAttribute('data-pair', card.pairId);
+                cardContainer.setAttribute('data-unique-id', card.uniqueId);
+                cardContainer.addEventListener('click', handleCardClick);
+
+                cardContainer.innerHTML = `
+                    <div class="card-front">${card.icon}</div>
+                    <div class="card-back">Match</div>
+                `;
+
+                gameBoard.appendChild(cardContainer);
+            });
+        }
+
+        // Handles the card flip logic
+        function handleCardClick(event) {
+            if (lockBoard) return;
+            const cardElement = event.currentTarget;
+            
+            // Prevent flipping an already matched or already flipped card
+            if (cardElement.classList.contains('flipped')) return;
+
+            // 1. Flip the card and speak the name
+            cardElement.classList.add('flipped');
+            const cardName = cardElement.getAttribute('data-pair');
+            speakWord(cardName); // VOICE FUNCTIONALITY
+
+            flippedCards.push(cardElement);
+
+            if (flippedCards.length === 2) {
+                // Lock the board to prevent further clicks
+                lockBoard = true;
+                totalMoves++;
+                movesCountDisplay.textContent = totalMoves;
+                
+                checkForMatch();
+            }
+        }
+
+        // Checks if the two flipped cards are a match
+        function checkForMatch() {
+            const [card1, card2] = flippedCards;
+            const isMatch = card1.getAttribute('data-pair') === card2.getAttribute('data-pair');
+
+            if (isMatch) {
+                // It's a match!
+                disableCards(card1, card2);
+                matchesFound++;
+                matchesCountDisplay.textContent = matchesFound;
+                checkWinCondition();
+            } else {
+                // Not a match, flip back after a delay
+                setTimeout(() => {
+                    unflipCards(card1, card2);
+                }, 1000);
+            }
+        }
+
+        // Handles matched cards
+        function disableCards(card1, card2) {
+            // Visual feedback and permanent disabling
+            card1.classList.add('matched');
+            card2.classList.add('matched');
+            
+            // Reset for next turn
+            resetFlippedCards();
+        }
+
+        // Handles unmatched cards
+        function unflipCards(card1, card2) {
+            card1.classList.remove('flipped');
+            card2.classList.remove('flipped');
+            
+            // Reset for next turn
+            resetFlippedCards();
+        }
+
+        // Resets the state for the next pair selection
+        function resetFlippedCards() {
+            [...flippedCards] = [];
+            lockBoard = false;
+        }
+
+        // Checks if all pairs have been found
+        function checkWinCondition() {
+            if (matchesFound === TOTAL_PAIRS) {
+                finalMessage.classList.remove('hidden');
+                restartButton.classList.remove('hidden');
+                gameBoard.removeEventListener('click', handleCardClick, true); // Stop listening to clicks
+                speakWord("Congratulations! You found all the pairs in " + totalMoves + " moves!");
+            }
+        }
+        
+        // Initializes the game state
+        function initGame() {
+            // Reset stats
+            matchesFound = 0;
+            totalMoves = 0;
+            matchesCountDisplay.textContent = 0;
+            movesCountDisplay.textContent = 0;
+            finalMessage.classList.add('hidden');
+            restartButton.classList.add('hidden');
+            lockBoard = false;
+            
+            setupBoard();
+            renderBoard();
+        }
+
+        // --- 4. EVENT LISTENERS ---
+        restartButton.addEventListener('click', initGame);
+
+        // --- 5. INITIALIZE ---
+        initGame();
+    </script>
+    </body>
+</html>

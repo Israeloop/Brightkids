@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌟 Super Listen & Select 🧠</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-primary: #FF5733; /* Vivid Orange/Red */
+            --color-secondary: #33C4FF; /* Bright Blue */
+            --color-success: #4CAF50; /* Green */
+            --color-error: #E74C3C; /* Red */
+            --bg-color: #F0F8FF; /* Very light sky blue */
+            --card-bg: #FFFFFF;
+            --shadow-light: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-deep: 0 8px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            text-align: center;
+            background-color: var(--bg-color);
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 25px;
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--color-primary);
+            font-size: 2.5em;
+            text-shadow: 2px 2px 0 var(--color-secondary);
+            margin-bottom: 5px;
+        }
+        
+        #stats {
+            display: flex;
+            justify-content: space-between;
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-light);
+            font-weight: 700;
+            margin-top: 15px;
+        }
+        #stats div {
+            padding: 0 10px;
+        }
+
+        #game-container {
+            max-width: 900px;
+            width: 90%;
+            padding: 30px;
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: var(--shadow-deep);
+            border: 5px solid var(--color-secondary);
+        }
+
+        /* --- Action Buttons --- */
+        .action-button {
+            background-color: var(--color-primary);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 1.3em;
+            font-family: 'Fredoka One', cursive;
+            border-radius: 50px;
+            cursor: pointer;
+            margin: 15px 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 5px 0 #BF4224; /* 3D Shadow */
+            user-select: none;
+        }
+        .action-button:active {
+            box-shadow: 0 2px 0 #BF4224;
+            transform: translateY(3px);
+        }
+        .action-button:hover {
+            opacity: 0.9;
+        }
+        
+        #hint-button {
+            background-color: #F1C40F;
+            box-shadow: 0 5px 0 #C9A20F;
+        }
+        #hint-button:active {
+            box-shadow: 0 2px 0 #C9A20F;
+        }
+        
+        /* Next Level Button */
+        #next-button {
+            background-color: var(--color-success);
+            box-shadow: 0 5px 0 #3b8e40;
+        }
+        #next-button:active {
+            box-shadow: 0 2px 0 #3b8e40;
+        }
+
+
+        /* --- Options Grid --- */
+        #options-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .option-card {
+            background-color: #f7f7f7;
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: var(--shadow-light);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, border 0.3s;
+            border: 5px solid transparent;
+            min-height: 180px; 
+        }
+
+        .option-card img {
+            width: 100%;
+            height: 120px;
+            object-fit: contain;
+            pointer-events: none; 
+        }
+
+        .option-card:hover:not(.disabled) {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-deep);
+        }
+
+        /* --- Dynamic Feedback --- */
+        .correct {
+            border-color: var(--color-success) !important; 
+            background-color: #D4EDDA; 
+            animation: pulse-success 0.5s 1;
+        }
+
+        .incorrect {
+            border-color: var(--color-error) !important;
+            background-color: #F8D7DA; 
+            animation: shake 0.5s 1;
+        }
+        
+        /* Hint Animation */
+        .hint {
+             border-color: #F1C40F !important;
+             background-color: #FFF3CD;
+             animation: flash 1s infinite alternate;
+        }
+
+        /* Animations */
+        @keyframes pulse-success {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        @keyframes flash {
+            from { opacity: 1; }
+            to { opacity: 0.5; }
+        }
+
+        .disabled {
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .hidden {
+            display: none;
+        }
+        
+        /* Finish Message Style */
+        #final-message {
+            font-family: 'Fredoka One', cursive;
+            font-size: 3em;
+            color: var(--color-primary);
+            text-shadow: 2px 2px 0 var(--color-secondary);
+            margin-top: 50px;
+        }
+        
+        /* SVG Color Square Style (only level 1) */
+        .color-square {
+            width: 100%;
+            height: 120px;
+            border-radius: 8px;
+            pointer-events: none;
+        }
+    </style>
+    </head>
+<body>
+
+    <header>
+        <h1>👂 Listen and Tap!</h1>
+        <div id="stats">
+            <div>Level: <span id="current-level">1</span> / <span id="total-levels">5</span></div>
+            <div>Score: <span id="score-count">0</span></div>
+        </div>
+    </header>
+
+    <main id="game-container">
+        
+        <div id="action-buttons">
+            <button id="listen-button" class="action-button">
+                <span class="icon">🔊</span> Listen
+            </button>
+            <button id="hint-button" class="action-button">
+                💡 Hint
+            </button>
+        </div>
+        
+        <div id="options-grid">
+            </div>
+        
+        <div id="next-area" class="hidden">
+            <button id="next-button" class="action-button primary-button">Next Level 🎉</button>
+        </div>
+        
+        <p id="final-message" class="hidden">Game Completed! You got <span id="final-score-message"></span> correct answers. 🏆</p>
+
+    </main>
+
+    <script>
+        // --- 1. GAME DATA (50 Levels structure - 5 examples provided) ---
+        // Level 1 uses embedded SVGs for immediate functionality.
+        // Others use external paths (template for your images).
+        const gameData = [
+            { id: 1, correctAnswer: 'red', 
+                options: [
+                    { name: 'red', image: '<div class="color-square" style="background-color: red;"></div>' }, 
+                    { name: 'blue', image: '<div class="color-square" style="background-color: blue;"></div>' }, 
+                    { name: 'green', image: '<div class="color-square" style="background-color: green;"></div>' }, 
+                    { name: 'yellow', image: '<div class="color-square" style="background-color: yellow; border: 1px solid #333;"></div>' }
+                ] 
+            },
+            { id: 2, correctAnswer: 'dog', options: [{ name: 'cat', image: '<img src="img/animals/cat.png" alt="cat">' }, { name: 'dog', image: '<img src="img/animals/dog.png" alt="dog">' }, { name: 'duck', image: '<img src="img/animals/duck.png" alt="duck">' }, { name: 'cow', image: '<img src="img/animals/cow.png" alt="cow">' }] },
+            { id: 3, correctAnswer: 'one', options: [{ name: 'one', image: '<img src="img/numbers/one.png" alt="one">' }, { name: 'two', image: '<img src="img/numbers/two.png" alt="two">' }, { name: 'three', image: '<img src="img/numbers/three.png" alt="three">' }, { name: 'four', image: '<img src="img/numbers/four.png" alt="four">' }] },
+            { id: 4, correctAnswer: 'apple', options: [{ name: 'apple', image: '<img src="img/fruits/apple.png" alt="apple">' }, { name: 'pear', image: '<img src="img/fruits/pear.png" alt="pear">' }, { name: 'grape', image: '<img src="img/fruits/grape.png" alt="grape">' }, { name: 'orange', image: '<img src="img/fruits/orange.png" alt="orange">' }] },
+            { id: 5, correctAnswer: 'car', options: [{ name: 'train', image: '<img src="img/vehicles/train.png" alt="train">' }, { name: 'car', image: '<img src="img/vehicles/car.png" alt="car">' }, { name: 'boat', image: '<img src="img/vehicles/boat.png" alt="boat">' }, { name: 'plane', image: '<img src="img/vehicles/plane.png" alt="plane">' }] },
+            // Add your remaining 45 levels here (id: 6, ... id: 50)
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- 2. ELEMENT SELECTORS ---
+            const optionsGrid = document.getElementById('options-grid');
+            const listenButton = document.getElementById('listen-button');
+            const hintButton = document.getElementById('hint-button');
+            const nextButton = document.getElementById('next-button');
+            const nextArea = document.getElementById('next-area');
+            const levelIndicator = document.getElementById('current-level');
+            const totalLevelsDisplay = document.getElementById('total-levels');
+            const scoreCount = document.getElementById('score-count');
+            const finalMessage = document.getElementById('final-message');
+            const finalScoreMessage = document.getElementById('final-score-message');
+
+            // --- 3. STATE VARIABLES ---
+            let currentQuestionIndex = 0;
+            let score = 0;
+            const TOTAL_LEVELS = gameData.length;
+            totalLevelsDisplay.textContent = TOTAL_LEVELS; 
+
+            // --- 4. AUDIO CONFIGURATION (Web Speech Synthesis) ---
+
+            // Function to make the browser read the word
+            function speakWord(text) {
+                if ('speechSynthesis' in window) {
+                    if (speechSynthesis.speaking) {
+                        speechSynthesis.cancel();
+                    }
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'en-US'; // English Language
+                    utterance.rate = 0.9; // Slightly slower rate for kids
+                    
+                    speechSynthesis.speak(utterance);
+                } else {
+                    console.warn('Speech Synthesis not supported. Audio functions disabled.');
+                }
+            }
+            
+            // External sound effects (placeholders)
+            const audioCorrect = new Audio('https://s3.amazonaws.com/iamsteve/audio/success.mp3'); 
+            const audioError = new Audio('https://s3.amazonaws.com/iamsteve/audio/error.mp3'); 
+
+            // --- 5. CORE FUNCTIONS ---
+
+            // Shuffle array (Fisher-Yates)
+            function shuffleArray(array) {
+                for (let i = array.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [array[i], array[j]] = [array[j], array[i]];
+                }
+            }
+
+            // Load a new level
+            function loadLevel() {
+                if (currentQuestionIndex >= TOTAL_LEVELS) {
+                    showFinishMessage();
+                    return;
+                }
+
+                const currentLevel = gameData[currentQuestionIndex];
+                
+                // Update interface
+                levelIndicator.textContent = currentLevel.id;
+                optionsGrid.innerHTML = '';
+                nextArea.classList.add('hidden');
+                optionsGrid.classList.remove('disabled');
+                hintButton.disabled = false;
+                
+                // Shuffle and create option cards
+                shuffleArray(currentLevel.options); 
+
+                currentLevel.options.forEach(option => {
+                    const card = document.createElement('div');
+                    card.classList.add('option-card');
+                    card.setAttribute('data-answer', option.name);
+                    
+                    // Assign image content (may be <img> tag or SVG <div>)
+                    card.innerHTML = option.image; 
+
+                    card.addEventListener('click', handleAnswer);
+                    optionsGrid.appendChild(card);
+                });
+
+                // Read the correct word using TTS
+                speakWord(currentLevel.correctAnswer);
+            }
+
+            // Handle answer selection
+            function handleAnswer(event) {
+                optionsGrid.classList.add('disabled'); 
+                hintButton.disabled = true; 
+
+                const selectedCard = event.currentTarget;
+                const userAnswer = selectedCard.getAttribute('data-answer');
+                const correctAnswer = gameData[currentQuestionIndex].correctAnswer;
+
+                if (userAnswer === correctAnswer) {
+                    selectedCard.classList.add('correct');
+                    score++;
+                    scoreCount.textContent = score;
+                    audioCorrect.play().catch(e => console.log('Could not play success audio.'));
+                } else {
+                    selectedCard.classList.add('incorrect');
+                    
+                    // Show the correct answer
+                    const correctCard = document.querySelector(`.option-card[data-answer="${correctAnswer}"]`);
+                    if (correctCard) correctCard.classList.add('correct');
+                    
+                    audioError.play().catch(e => console.log('Could not play error audio.'));
+                }
+
+                nextArea.classList.remove('hidden');
+            }
+            
+            // Show a visual hint
+            function showHint() {
+                hintButton.disabled = true;
+                const correctAnswer = gameData[currentQuestionIndex].correctAnswer;
+                const correctCard = document.querySelector(`.option-card[data-answer="${correctAnswer}"]`);
+                
+                if (correctCard) {
+                    correctCard.classList.add('hint');
+                    setTimeout(() => {
+                        correctCard.classList.remove('hint');
+                    }, 1500);
+                }
+            }
+
+            // Show finish message
+            function showFinishMessage() {
+                optionsGrid.innerHTML = ''; 
+                document.getElementById('action-buttons').classList.add('hidden');
+                nextArea.classList.add('hidden');
+                levelIndicator.parentNode.innerHTML = 'Finished!';
+                finalScoreMessage.textContent = `${score} out of ${TOTAL_LEVELS}`;
+                finalMessage.classList.remove('hidden');
+            }
+
+
+            // --- 6. EVENT LISTENERS ---
+            listenButton.addEventListener('click', () => {
+                // Use speech synthesis
+                speakWord(gameData[currentQuestionIndex].correctAnswer);
+            });
+
+            hintButton.addEventListener('click', showHint);
+
+            nextButton.addEventListener('click', () => {
+                currentQuestionIndex++;
+                loadLevel();
+            });
+            
+            // --- 7. START GAME ---
+            loadLevel();
+        });
+    </script>
+    </body>
+</html>
